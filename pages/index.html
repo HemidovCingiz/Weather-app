@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Weather App — Basit ve Güçlü</title>
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --accent:#06b6d4;
+      --muted:#94a3b8;
+      --glass: rgba(255,255,255,0.03);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(6,182,212,0.06), transparent),
+                  radial-gradient(800px 400px at 90% 90%, rgba(99,102,241,0.04), transparent),
+                  var(--bg);
+      color:#e6eef6;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+
+    .app {
+      width:100%;
+      max-width:760px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:16px;
+      padding:22px;
+      box-shadow: 0 6px 30px rgba(2,6,23,0.6);
+      border:1px solid rgba(255,255,255,0.03);
+    }
+
+    header{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:18px;
+    }
+    header h1{
+      font-size:18px;
+      margin:0;
+      letter-spacing:0.2px;
+      color: #f8fafc;
+    }
+    .controls{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .search {
+      display:flex;
+      gap:8px;
+      background:var(--glass);
+      padding:8px;
+      border-radius:12px;
+      align-items:center;
+      border:1px solid rgba(255,255,255,0.02);
+    }
+    .search input{
+      background:transparent;
+      border:0;
+      outline:0;
+      color:inherit;
+      width:220px;
+      font-size:14px;
+    }
+    button{
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.06);
+      padding:8px 10px;
+      border-radius:10px;
+      color:var(--muted);
+      cursor:pointer;
+      font-size:13px;
+    }
+    button.primary{
+      background: linear-gradient(90deg,var(--accent), #7c3aed);
+      border:0;
+      color:#051025;
+      font-weight:600;
+    }
+
+    main{
+      display:flex;
+      gap:18px;
+      align-items:stretch;
+      flex-wrap:wrap;
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));
+      border-radius:12px;
+      padding:18px;
+      flex:1 1 320px;
+      min-height:200px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      border:1px solid rgba(255,255,255,0.02);
+    }
+
+    .weather-top{ display:flex; gap:12px; align-items:center; }
+    .city{ font-size:20px; font-weight:700; }
+    .meta{ color:var(--muted); font-size:13px }
+
+    .conditions{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-top:12px;
+    }
+    .temp {
+      font-size:44px;
+      font-weight:700;
+      line-height:1;
+    }
+    .icon{
+      width:96px;
+      height:96px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .details{
+      display:flex;
+      gap:12px;
+      margin-top:12px;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .bottom{
+      margin-top:14px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .notice{ color:var(--muted); font-size:13px }
+
+    .loader{
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      border:3px solid rgba(255,255,255,0.08);
+      border-top-color:var(--accent);
+      animation:spin 1s linear infinite;
+      display:inline-block;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .error{
+      margin-top:10px;
+      color:#ffb4b4;
+      background: rgba(255,40,40,0.04);
+      padding:8px;
+      border-radius:8px;
+      font-size:13px;
+      border:1px solid rgba(255,40,40,0.06);
+    }
+
+    footer{
+      margin-top:16px;
+      color:var(--muted);
+      font-size:12px;
+      text-align:center;
+    }
+
+    @media (max-width:520px){
+      .search input{width:120px}
+      .conditions{flex-direction:column; align-items:flex-start}
+      .icon{width:72px;height:72px}
+      .temp{font-size:36px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Hava Durumu Uygulaması">
+    <header>
+      <h1>Weather App</h1>
+      <div class="controls" role="region" aria-label="Araçlar">
+        <div class="search" aria-hidden="false">
+          <input id="cityInput" type="text" placeholder="Şehir yazın (örn: Baku)" aria-label="Şehir"/>
+          <button id="searchBtn" title="Ara">Ara</button>
+        </div>
+        <button id="geoBtn" title="Konumdan al">Konumdan Al</button>
+        <button id="saveBtn" class="primary" title="Son şehir kaydet">Kaydet</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="card" aria-live="polite" id="weatherCard">
+        <div>
+          <div class="weather-top">
+            <div>
+              <div id="cityName" class="city">—</div>
+              <div id="cityMeta" class="meta">—</div>
+            </div>
+            <div style="margin-left:auto; text-align:right;">
+              <div id="updatedAt" class="meta">—</div>
+            </div>
+          </div>
+
+          <div class="conditions">
+            <div>
+              <div class="temp" id="temp">—°C</div>
+              <div id="desc" class="meta">—</div>
+            </div>
+
+            <div class="icon" aria-hidden="true">
+              <img id="iconImg" src="" alt="" width="96" height="96" style="display:none"/>
+            </div>
+          </div>
+
+          <div class="details" id="details">
+            <div id="feels">—</div>
+            <div id="humidity">—</div>
+            <div id="wind">—</div>
+          </div>
+
+          <div id="error" class="error" style="display:none"></div>
+        </div>
+
+        <div class="bottom">
+          <div class="notice" id="notice">Veri bekleniyor.</div>
+          <div id="loading" style="display:none"><span class="loader" role="status" aria-label="yükleniyor"></span></div>
+        </div>
+      </section>
+
+      <aside class="card" aria-label="Bilgiler">
+        <h3 style="margin:0 0 8px 0">Nasıl çalışır?</h3>
+        <p style="margin:0 0 8px 0; color:var(--muted); font-size:14px">
+          Şehir adıyla arama yapın veya konumunuza izin verin. Uygulama OpenWeatherMap'den güncel hava verisini alır.
+        </p>
+        <div style="margin-top:12px; color:var(--muted); font-size:13px">
+          <strong>Not:</strong> API anahtarınızı JavaScript'te saklamak küçük uygulamalar için kolaydır; üretimde sunucu tarafı proxy kullanmanız daha güvenlidir.
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      © 2025 • Basit Weather App — Kaynak: OpenWeatherMap
+    </footer>
+  </div>
+
+  <script>
+    /* ---------- AYARLAR ---------- */
+    const API_KEY = ""; // <-- Buraya OpenWeatherMap API anahtarınızı koyun (https://openweathermap.org/api)
+    const BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
+
+    /* ---------- ELEMANLAR ---------- */
+    const cityInput = document.getElementById("cityInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const geoBtn = document.getElementById("geoBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const loadingEl = document.getElementById("loading");
+    const noticeEl = document.getElementById("notice");
+    const errorEl = document.getElementById("error");
+    const cityNameEl = document.getElementById("cityName");
+    const cityMetaEl = document.getElementById("cityMeta");
+    const tempEl = document.getElementById("temp");
+    const descEl = document.getElementById("desc");
+    const iconImg = document.getElementById("iconImg");
+    const updatedAtEl = document.getElementById("updatedAt");
+    const detailsEl = document.getElementById("details");
+    const feelsEl = document.getElementById("feels");
+    const humidityEl = document.getElementById("humidity");
+    const windEl = document.getElementById("wind");
+
+    /* ---------- UTIL ---------- */
+    function showLoading(show=true){
+      loadingEl.style.display = show ? "block" : "none";
+      noticeEl.textContent = show ? "Veri çekiliyor..." : "Güncel.";
+    }
+    function showError(msg){
+      errorEl.style.display = "block";
+      errorEl.textContent = msg;
+    }
+    function hideError(){
+      errorEl.style.display = "none";
+      errorEl.textContent = "";
+    }
+    function formatTime(ts){
+      const d = new Date(ts * 1000);
+      return d.toLocaleString();
+    }
+
+    /* ---------- HAVA VERİSİ ÇEKME ---------- */
+    async function fetchWeatherByCity(city){
+      if(!city || !city.trim()) {
+        showError("Lütfen geçerli bir şehir adı girin.");
+        return;
+      }
+      if(!API_KEY){
+        showError("API anahtarı yapılandırılmadı. Lütfen OpenWeatherMap API anahtarı ekleyin.");
+        return;
+      }
+      hideError();
+      showLoading(true);
+      try{
+        const url = `${BASE_URL}?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric&lang=tr`;
+        const res = await fetch(url);
+        if(!res.ok){
+          if(res.status === 404) throw new Error("Şehir bulunamadı.");
+          if(res.status === 401) throw new Error("API anahtarı geçersiz.");
+          throw new Error("Sunucudan beklenmedik cevap alındı.");
+        }
+        const data = await res.json();
+        renderWeather(data);
+        localStorage.setItem("lastCity", city);
+      }catch(err){
+        showError(err.message);
+      }finally{
+        showLoading(false);
+      }
+    }
+
+    async function fetchWeatherByCoords(lat, lon){
+      if(!API_KEY){
+        showError("API anahtarı yapılandırılmadı. Lütfen OpenWeatherMap API anahtarı ekleyin.");
+        return;
+      }
+      hideError();
+      showLoading(true);
+      try{
+        const url = `${BASE_URL}?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=tr`;
+        const res = await fetch(url);
+        if(!res.ok) throw new Error("Konum verisiyle hava alınamadı.");
+        const data = await res.json();
+        renderWeather(data);
+        if(data && data.name) localStorage.setItem("lastCity", data.name);
+      }catch(err){
+        showError(err.message);
+      }finally{
+        showLoading(false);
+      }
+    }
+
+    /* ---------- RENDER ---------- */
+    function renderWeather(data){
+      if(!data) return;
+      // şehir / meta
+      cityNameEl.textContent = `${data.name}, ${data.sys?.country || ""}`;
+      cityMetaEl.textContent = `Koordinat: [${data.coord.lat.toFixed(2)}, ${data.coord.lon.toFixed(2)}]`;
+
+      // zaman
+      updatedAtEl.textContent = "Güncellendi: " + formatTime(data.dt);
+
+      // temel
+      tempEl.textContent = Math.round(data.main.temp) + "°C";
+      descEl.textContent = toTitleCase(data.weather?.[0]?.description || "—");
+
+      // icon
+      const icon = data.weather?.[0]?.icon;
+      if(icon){
+        iconImg.src = `https://openweathermap.org/img/wn/${icon}@2x.png`;
+        iconImg.alt = data.weather[0].description || "hava ikonu";
+        iconImg.style.display = "block";
+      } else {
+        iconImg.style.display = "none";
+      }
+
+      // detaylar
+      feelsEl.textContent = "Hissedilen: " + Math.round(data.main.feels_like) + "°C";
+      humidityEl.textContent = "Nem: " + data.main.humidity + "%";
+      windEl.textContent = "Rüzgar: " + (data.wind.speed || "—") + " m/s";
+
+      hideError();
+    }
+
+    function toTitleCase(s){
+      return s.replace(/(^|\\s)\\S/g, t => t.toUpperCase());
+    }
+
+    /* ---------- ETKİLEŞİM ---------- */
+    searchBtn.addEventListener("click", () => {
+      const city = cityInput.value.trim();
+      fetchWeatherByCity(city);
+    });
+    cityInput.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") searchBtn.click();
+    });
+
+    geoBtn.addEventListener("click", () => {
+      hideError();
+      if(!navigator.geolocation){
+        showError("Tarayıcı konumu desteklemiyor.");
+        return;
+      }
+      showLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude);
+        },
+        err => {
+          showLoading(false);
+          showError("Konum alınamadı: " + (err.message || "izin reddedildi."));
+        },
+        { timeout: 10000 }
+      );
+    });
+
+    saveBtn.addEventListener("click", () => {
+      const city = cityInput.value.trim();
+      if(city) {
+        localStorage.setItem("lastCity", city);
+        noticeEl.textContent = "Son şehir kaydedildi: " + city;
+        setTimeout(()=> noticeEl.textContent = "Güncel.", 2500);
+      } else {
+        showError("Kaydetmek için önce şehir girin.");
+      }
+    });
+
+    /* ---------- BAŞLANGIÇTA SON ŞEHIRİ YÜKLE ---------- */
+    (function init(){
+      const last = localStorage.getItem("lastCity");
+      if(last){
+        cityInput.value = last;
+        fetchWeatherByCity(last);
+      } else {
+        noticeEl.textContent = "Şehir aratarak veya konumla başlayın.";
+      }
+    })();
+
+    /* ---------- GEREKLİ GÜVENLİK NOTU ---------- */
+    // Küçük uygulamalar için API anahtarını doğrudan JS'de kullanmak kolaydır fakat
+    // anahtarın gizli kalması gerekiyorsa sunucu tarafı proxy veya serverless function kullanın.
+  </script>
+</body>
+</html>
